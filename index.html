@@ -394,6 +394,7 @@
     });
   } else {
     document.getElementById('staticBanner').hidden = false;
+    goBtn.textContent = 'Try it live on Claude →';
   }
 
   function setBusy(isBusy, label){
@@ -402,6 +403,11 @@
   }
 
   goBtn.addEventListener('click', async () => {
+    if (!window.claude || typeof window.claude.use !== 'function') {
+      window.open('https://claude.ai/artifact/UquqvF1S2waA3UEyFUWaTL', '_blank', 'noopener');
+      return;
+    }
+
     const desc = descInput.value.trim();
     if (!desc && !selectedFile) {
       statusText.textContent = 'Add a description or a photo first.';
