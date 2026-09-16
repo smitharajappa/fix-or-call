@@ -189,9 +189,20 @@
 
   footer{ font-size:12px; color:var(--ink-muted); line-height:1.5; padding-top:6px; }
   [hidden]{ display:none !important; }
+
+  .static-banner{
+    background:var(--caution-bg); color:var(--caution);
+    border:1px solid var(--caution); border-radius:10px;
+    padding:12px 14px; font-size:13px; line-height:1.5;
+  }
+  .static-banner a{ color:inherit; font-weight:600; }
 </style>
 
 <div class="page">
+  <div class="static-banner" id="staticBanner" hidden>
+    This is a static preview on GitHub Pages — the AI diagnosis needs Claude's own runtime to work.
+    <a href="https://claude.ai/artifact/UquqvF1S2waA3UEyFUWaTL" target="_blank" rel="noopener">Try the live, working version on Claude →</a>
+  </div>
   <header>
     <span class="eyebrow">Household repair triage</span>
     <h1>Fix or Call</h1>
@@ -381,6 +392,8 @@
         if (imagesOk) photoInput.accept = limits.images.mediaTypes.join(',');
       } catch (e) { /* keep defaults */ }
     });
+  } else {
+    document.getElementById('staticBanner').hidden = false;
   }
 
   function setBusy(isBusy, label){
