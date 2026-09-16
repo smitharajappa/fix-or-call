@@ -1,0 +1,437 @@
+<meta charset="utf-8">
+<title>Fix or Call</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --bg:#eef1ec;
+    --surface:#ffffff;
+    --surface-2:#e2e7df;
+    --line:#cdd5c8;
+    --ink:#1c2320;
+    --ink-muted:#5c655f;
+    --accent:#2a5c8a;
+    --accent-ink:#f4f8fb;
+    --good:#2f7a4d;
+    --good-bg:#e4f1e7;
+    --caution:#96660a;
+    --caution-bg:#f5ecd7;
+    --danger:#a83a2c;
+    --danger-bg:#f6e3df;
+    --chip-bg:#eef1ec;
+    --shadow: 0 1px 2px rgba(28,35,32,.06), 0 6px 20px rgba(28,35,32,.06);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#161a17;
+      --surface:#20241f;
+      --surface-2:#2a2f28;
+      --line:#3a4139;
+      --ink:#eceee9;
+      --ink-muted:#a7afa4;
+      --accent:#7fb2e0;
+      --accent-ink:#0e1a24;
+      --good:#79c495;
+      --good-bg:#1c2e21;
+      --caution:#e0b45c;
+      --caution-bg:#332b16;
+      --danger:#e29285;
+      --danger-bg:#3a201b;
+      --chip-bg:#2a2f28;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.35);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#161a17;
+    --surface:#20241f;
+    --surface-2:#2a2f28;
+    --line:#3a4139;
+    --ink:#eceee9;
+    --ink-muted:#a7afa4;
+    --accent:#7fb2e0;
+    --accent-ink:#0e1a24;
+    --good:#79c495;
+    --good-bg:#1c2e21;
+    --caution:#e0b45c;
+    --caution-bg:#332b16;
+    --danger:#e29285;
+    --danger-bg:#3a201b;
+    --chip-bg:#2a2f28;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.35);
+    color-scheme: dark;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"IBM Plex Sans", system-ui, sans-serif;
+    padding:32px 16px 56px;
+  }
+  .page{ max-width:640px; margin:0 auto; display:flex; flex-direction:column; gap:22px; }
+
+  header{ display:flex; flex-direction:column; gap:6px; padding-block:4px 4px; }
+  .eyebrow{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:11px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--ink-muted);
+  }
+  h1{
+    font-family:"Fraunces", Georgia, serif;
+    font-weight:600; font-size:clamp(30px,7vw,40px);
+    margin:0; line-height:1.05; text-wrap:balance;
+  }
+  .tagline{ color:var(--ink-muted); font-size:15px; max-width:52ch; margin:0; }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    box-shadow:var(--shadow);
+    padding:20px;
+  }
+
+  .field-label{ font-size:12px; font-weight:600; letter-spacing:.03em; color:var(--ink-muted); text-transform:uppercase; display:block; margin-bottom:8px; }
+
+  textarea{
+    width:100%; min-height:88px; resize:vertical;
+    font:15px/1.45 "IBM Plex Sans", sans-serif;
+    color:var(--ink); background:var(--bg);
+    border:1px solid var(--line); border-radius:10px;
+    padding:12px 14px;
+  }
+  textarea:focus, .photo-btn:focus-visible, button:focus-visible, .chip:focus-visible{
+    outline:2px solid var(--accent); outline-offset:2px;
+  }
+
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .chip{
+    font:12px/1 "IBM Plex Sans", sans-serif;
+    background:var(--chip-bg); color:var(--ink-muted);
+    border:1px solid var(--line); border-radius:999px;
+    padding:7px 12px; cursor:pointer;
+  }
+  .chip:hover{ color:var(--ink); border-color:var(--ink-muted); }
+
+  .photo-row{ display:flex; align-items:center; gap:12px; margin-top:14px; flex-wrap:wrap; }
+  .photo-btn{
+    font:13px/1 "IBM Plex Sans", sans-serif; font-weight:500;
+    background:var(--surface-2); color:var(--ink);
+    border:1px solid var(--line); border-radius:9px;
+    padding:9px 14px; cursor:pointer; display:inline-flex; align-items:center; gap:7px;
+  }
+  .photo-btn:hover{ border-color:var(--accent); }
+  #photoInput{ display:none; }
+  .photo-preview{ display:none; align-items:center; gap:8px; }
+  .photo-preview img{ width:44px; height:44px; object-fit:cover; border-radius:7px; border:1px solid var(--line); }
+  .photo-preview button{
+    font:12px "IBM Plex Sans"; color:var(--danger); background:none; border:none; cursor:pointer; padding:4px;
+  }
+
+  .submit-row{ margin-top:16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .go-btn{
+    font:14px/1 "IBM Plex Sans", sans-serif; font-weight:600;
+    background:var(--accent); color:var(--accent-ink);
+    border:none; border-radius:9px;
+    padding:12px 20px; cursor:pointer;
+  }
+  .go-btn:disabled{ opacity:.55; cursor:default; }
+  .status-text{ font-size:13px; color:var(--ink-muted); }
+
+  .ticket{ display:flex; flex-direction:column; gap:14px; }
+  .ticket-flag{
+    font-family:"IBM Plex Mono", monospace; font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--ink-muted);
+  }
+  .ticket-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .ticket-title{ font-family:"Fraunces", Georgia, serif; font-size:22px; font-weight:600; margin:0; }
+  .badge{
+    font-family:"IBM Plex Sans"; font-weight:600; font-size:12.5px;
+    padding:6px 12px; border-radius:999px; white-space:nowrap;
+  }
+  .badge.diy{ background:var(--good-bg); color:var(--good); }
+  .badge.borderline{ background:var(--caution-bg); color:var(--caution); }
+  .badge.pro{ background:var(--danger-bg); color:var(--danger); }
+
+  .diagnosis{ font-size:15px; line-height:1.55; margin:0; }
+
+  .stat-row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .stat{
+    flex:1 1 120px; background:var(--surface-2); border-radius:10px; padding:10px 14px;
+  }
+  .stat-label{ font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-muted); }
+  .stat-value{ font-family:"IBM Plex Mono", monospace; font-size:17px; margin-top:2px; }
+
+  .subhead{ font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-muted); margin:2px 0 8px; }
+
+  ol.steps{ margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:10px; }
+  ol.steps li{ display:flex; gap:12px; align-items:flex-start; font-size:14.5px; line-height:1.5; }
+  ol.steps .num{
+    font-family:"IBM Plex Mono", monospace; font-size:12px; font-weight:500;
+    color:var(--accent-ink); background:var(--accent);
+    width:22px; height:22px; border-radius:6px; flex:none;
+    display:flex; align-items:center; justify-content:center; margin-top:1px;
+  }
+
+  .tool-list{ display:flex; flex-wrap:wrap; gap:8px; }
+  .tool-chip{
+    font-size:12.5px; background:var(--chip-bg); border:1px solid var(--line);
+    border-radius:8px; padding:6px 10px;
+  }
+
+  .note-box{ border-radius:10px; padding:12px 14px; font-size:14px; line-height:1.5; }
+  .note-box.danger{ background:var(--danger-bg); color:var(--danger); }
+  .note-box.pro{ background:var(--surface-2); color:var(--ink); }
+  .note-box .note-label{ font-weight:600; display:block; margin-bottom:3px; font-size:12px; text-transform:uppercase; letter-spacing:.05em; }
+
+  footer{ font-size:12px; color:var(--ink-muted); line-height:1.5; padding-top:6px; }
+  [hidden]{ display:none !important; }
+</style>
+
+<div class="page">
+  <header>
+    <span class="eyebrow">Household repair triage</span>
+    <h1>Fix or Call</h1>
+    <p class="tagline">Describe what's broken, or snap a photo. You'll get a plain-English diagnosis, DIY steps if it's safe to try yourself, and exactly what to say if it's not.</p>
+  </header>
+
+  <section class="card">
+    <label class="field-label" for="descInput">What's wrong?</label>
+    <textarea id="descInput" placeholder="e.g. The bathroom sink drips from the spout constantly, even fully off"></textarea>
+    <div class="chips" id="exampleChips">
+      <button type="button" class="chip" data-example="Bathroom sink drips constantly from the spout, even when the handle is fully off.">Dripping faucet</button>
+      <button type="button" class="chip" data-example="Toilet keeps running about 30 seconds after every flush, water never fully stops.">Running toilet</button>
+      <button type="button" class="chip" data-example="One kitchen cabinet door is loose and sags at an angle, doesn't close flush anymore.">Wobbly cabinet door</button>
+      <button type="button" class="chip" data-example="Ceiling fan wobbles and makes a clicking noise on the highest speed setting.">Wobbly ceiling fan</button>
+    </div>
+    <div class="photo-row">
+      <button type="button" class="photo-btn" id="photoBtn">📷 Add a photo instead (or as well)</button>
+      <input type="file" id="photoInput" accept="image/*" capture="environment">
+      <span class="photo-preview" id="photoPreview">
+        <img id="photoThumb" alt="">
+        <span id="photoName" style="font-size:12px;color:var(--ink-muted);"></span>
+        <button type="button" id="photoClear">Remove</button>
+      </span>
+    </div>
+    <div class="submit-row">
+      <button type="button" class="go-btn" id="goBtn">Diagnose it</button>
+      <span class="status-text" id="statusText"></span>
+    </div>
+  </section>
+
+  <section class="card ticket" id="result"></section>
+
+  <footer>General guidance only, based on the description or photo you provide — not a substitute for a licensed electrician, plumber, or gas technician. When gas, a breaker panel, or structure is involved, always confirm with a professional.</footer>
+</div>
+
+<script>
+(function(){
+  const descInput = document.getElementById('descInput');
+  const goBtn = document.getElementById('goBtn');
+  const statusText = document.getElementById('statusText');
+  const result = document.getElementById('result');
+  const photoBtn = document.getElementById('photoBtn');
+  const photoInput = document.getElementById('photoInput');
+  const photoPreview = document.getElementById('photoPreview');
+  const photoThumb = document.getElementById('photoThumb');
+  const photoName = document.getElementById('photoName');
+  const photoClear = document.getElementById('photoClear');
+
+  let selectedFile = null;
+  let sample = null;
+  let imagesOk = false;
+
+  document.getElementById('exampleChips').addEventListener('click', (e) => {
+    const btn = e.target.closest('.chip');
+    if (!btn) return;
+    descInput.value = btn.dataset.example;
+    descInput.focus();
+  });
+
+  photoBtn.addEventListener('click', () => photoInput.click());
+  photoInput.addEventListener('change', () => {
+    const f = photoInput.files && photoInput.files[0];
+    if (!f) return;
+    selectedFile = f;
+    photoThumb.src = URL.createObjectURL(f);
+    photoName.textContent = f.name.length > 22 ? f.name.slice(0,19) + '…' : f.name;
+    photoPreview.style.display = 'inline-flex';
+  });
+  photoClear.addEventListener('click', () => {
+    selectedFile = null;
+    photoInput.value = '';
+    photoPreview.style.display = 'none';
+  });
+
+  function badgeClass(v){ return v === 'diy' ? 'diy' : v === 'pro' ? 'pro' : 'borderline'; }
+  function badgeLabel(v){ return v === 'diy' ? 'DIY-safe' : v === 'pro' ? 'Call a pro' : 'Doable, with care'; }
+
+  function money(v){
+    if (Array.isArray(v)) return '$' + v[0] + '–' + v[1];
+    if (typeof v === 'number') return '$' + v;
+    return String(v || '—');
+  }
+
+  function el(tag, props, children){
+    const node = document.createElement(tag);
+    if (props) for (const k in props) {
+      if (k === 'class') node.className = props[k];
+      else if (k === 'text') node.textContent = props[k];
+      else node.setAttribute(k, props[k]);
+    }
+    (children || []).forEach(c => node.appendChild(c));
+    return node;
+  }
+
+  function renderTicket(data, opts){
+    opts = opts || {};
+    result.innerHTML = '';
+    result.hidden = false;
+
+    if (opts.isExample) {
+      result.appendChild(el('span', {class:'ticket-flag', text:'Example diagnosis — try your own above'}));
+    }
+
+    const head = el('div', {class:'ticket-head'}, [
+      el('h2', {class:'ticket-title', text: data.itemName || 'Diagnosis'}),
+      el('span', {class:'badge ' + badgeClass(data.verdict), text: badgeLabel(data.verdict)})
+    ]);
+    result.appendChild(head);
+    result.appendChild(el('p', {class:'diagnosis', text: data.diagnosis || ''}));
+
+    const stats = el('div', {class:'stat-row'}, [
+      el('div', {class:'stat'}, [
+        el('div', {class:'stat-label', text:'Est. time'}),
+        el('div', {class:'stat-value', text: (data.estTimeMinutes ? data.estTimeMinutes + ' min' : '—')})
+      ]),
+      el('div', {class:'stat'}, [
+        el('div', {class:'stat-label', text: data.verdict === 'pro' ? 'DIY cost avoided' : 'Est. parts cost'}),
+        el('div', {class:'stat-value', text: money(data.estCostUSD)})
+      ])
+    ]);
+    result.appendChild(stats);
+
+    if (data.tools && data.tools.length) {
+      result.appendChild(el('div', {class:'subhead', text:'From the toolbox / hardware aisle'}));
+      result.appendChild(el('div', {class:'tool-list'}, data.tools.map(t => el('span', {class:'tool-chip', text:t}))));
+    }
+
+    if (data.steps && data.steps.length) {
+      result.appendChild(el('div', {class:'subhead', text: data.verdict === 'pro' ? 'What a pro will do' : 'Steps'}));
+      const ol = el('ol', {class:'steps'});
+      data.steps.forEach((s, i) => {
+        ol.appendChild(el('li', null, [
+          el('span', {class:'num', text: String(i+1)}),
+          el('span', {text: s})
+        ]));
+      });
+      result.appendChild(ol);
+    }
+
+    if (data.safetyNote) {
+      result.appendChild(el('div', {class:'note-box danger'}, [
+        el('span', {class:'note-label', text:'Safety note'}),
+        el('span', {text: data.safetyNote})
+      ]));
+    }
+
+    if (data.verdict === 'pro' && data.proScript) {
+      result.appendChild(el('div', {class:'note-box pro'}, [
+        el('span', {class:'note-label', text:'What to say when you call'}),
+        el('span', {text: data.proScript})
+      ]));
+      if (data.proCostRange) {
+        result.appendChild(el('div', {class:'note-box pro'}, [
+          el('span', {class:'note-label', text:'Typical pro cost'}),
+          el('span', {text: data.proCostRange})
+        ]));
+      }
+    }
+  }
+
+  const EXAMPLE_DATA = {
+    itemName: 'Loose door hinge',
+    verdict: 'diy',
+    diagnosis: "The screws holding the top hinge have worked loose in the wood (the holes are 'stripped'), so the door sags and rubs the frame. It's a five-minute fix, not a new door or a call to anyone.",
+    estTimeMinutes: 10,
+    estCostUSD: 3,
+    tools: ['Phillips screwdriver', '3-4 wooden golf tees or matchsticks', 'wood glue', 'sandpaper (optional)'],
+    steps: [
+      'Open the door fully and remove the loose hinge screws.',
+      'Dab wood glue on 2-3 golf tees or matchsticks and push them into the empty screw holes.',
+      'Snap or cut off the excess flush with the wood, let the glue set 10-15 minutes.',
+      'Re-drive the original screws into the now-solid wood — they will bite properly this time.'
+    ],
+    safetyNote: null,
+    proScript: null,
+    proCostRange: null
+  };
+  renderTicket(EXAMPLE_DATA, {isExample:true});
+
+  if (window.claude && typeof window.claude.use === 'function') {
+    window.claude.use('sample').then(async (s) => {
+      sample = s;
+      if (!sample) return;
+      try {
+        const limits = await sample.limits();
+        imagesOk = !!limits.images;
+        if (imagesOk) photoInput.accept = limits.images.mediaTypes.join(',');
+      } catch (e) { /* keep defaults */ }
+    });
+  }
+
+  function setBusy(isBusy, label){
+    goBtn.disabled = isBusy;
+    statusText.textContent = label || '';
+  }
+
+  goBtn.addEventListener('click', async () => {
+    const desc = descInput.value.trim();
+    if (!desc && !selectedFile) {
+      statusText.textContent = 'Add a description or a photo first.';
+      return;
+    }
+    if (!sample) {
+      statusText.textContent = 'AI diagnosis isn\'t available in this view.';
+      return;
+    }
+
+    setBusy(true, 'Thinking…');
+    result.hidden = true;
+
+    const prompt = [
+      "You are a calm, encouraging home-repair triage assistant for someone with little to no repair experience or tools.",
+      selectedFile ? "A photo of the broken/malfunctioning item is attached." : "",
+      "Description from the person: " + (desc || "(see photo)"),
+      "",
+      "Decide: can an inexperienced person safely fix this themselves with basic tools, or does it need a professional (gas, electrical panel work, structural, roofing, refrigerant, or anything with real injury/code risk always needs a pro)?",
+      "Use plain, non-condescending language. Name the actual part once in parentheses if it has a technical name, but don't require the reader to already know it.",
+      "Reply with ONLY a JSON object, no markdown fence, matching exactly this shape:",
+      '{"itemName": "short 2-4 word name of the broken thing", "verdict": "diy" | "borderline" | "pro", "diagnosis": "2-3 plain-English sentences on what is likely wrong and why", "estTimeMinutes": number, "estCostUSD": number or [minNumber,maxNumber], "tools": ["short common-name tool or material", ...], "steps": ["short imperative step", ...], "safetyNote": "one sentence warning, or null if none apply", "proScript": "one short sentence the person can say when calling a pro, or null if verdict is diy", "proCostRange": "typical price range as a string like \\"$120-250\\", or null if verdict is diy"}',
+      "If verdict is \"pro\", steps should describe what the professional will do (not DIY instructions), tools should be empty or minimal, and proScript/proCostRange must be filled in.",
+      "If verdict is \"diy\" or \"borderline\", give 3-6 concrete steps and a real tools list, and leave proScript/proCostRange null unless useful as a fallback."
+    ].filter(Boolean).join('\n');
+
+    try {
+      const data = await sample.json(prompt, {
+        modelTier: 'default',
+        cache: false,
+        images: selectedFile || undefined
+      });
+      renderTicket(data, {isExample:false});
+      setBusy(false, '');
+    } catch (e) {
+      let msg = 'Something went wrong — try again.';
+      if (e && e.code === 'not_granted') msg = 'AI diagnosis needs to be allowed for this page.';
+      else if (e && e.code === 'image_rejected') msg = 'That photo couldn\'t be used — try a different one or describe it instead.';
+      else if (e && e.code === 'rate_limited') msg = 'Too many requests right now — wait a moment and try again.';
+      else if (e && e.code === 'invalid_json') msg = 'Got an unusable answer — try rephrasing the description.';
+      setBusy(false, msg);
+      result.hidden = false;
+    }
+  });
+})();
+</script>
