@@ -41,7 +41,8 @@ Use plain, non-condescending language. Name the actual part once in parentheses 
 Reply with ONLY a JSON object, no markdown fence, matching exactly this shape:
 {"itemName": "short 2-4 word name of the broken thing", "verdict": "diy" | "borderline" | "pro", "diagnosis": "2-3 plain-English sentences on what is likely wrong and why", "estTimeMinutes": number, "estCostUSD": number or [minNumber,maxNumber], "tools": ["short common-name tool or material", ...], "steps": ["short imperative step", ...], "safetyNote": "one sentence warning, or null if none apply", "proScript": "one short sentence the person can say when calling a pro, or null if verdict is diy", "proCostRange": "typical price range as a string like \\"$120-250\\", or null if verdict is diy"}
 If verdict is "pro", steps should describe what the professional will do (not DIY instructions), tools should be empty or minimal, and proScript/proCostRange must be filled in.
-If verdict is "diy" or "borderline", give 3-6 concrete steps and a real tools list, and leave proScript/proCostRange null unless useful as a fallback.`;
+If verdict is "diy" or "borderline", give 3-6 concrete steps and a real tools list, and leave proScript/proCostRange null unless useful as a fallback.
+Even if the description is vague, ambiguous, or oddly worded, make your best reasonable guess and still return the JSON object — never reply with a clarifying question or plain text, and never refuse; note any uncertainty inside the diagnosis field itself.`;
 
 export default {
   async fetch(request, env) {
@@ -107,36 +108,45 @@ export default {
         }
       );
 
-    let geminiRes = await callGemini();
-    // The free-tier model returns a transient 503 under load fairly often;
-    // one short-delay retry clears most of them without the viewer noticing.
-    if (geminiRes.status === 503) {
+    // One attempt: call Gemini, then try to read a usable JSON diagnosis out
+    // of it. Returns {ok:true, parsed} or {ok:false, error, detail}.
+    async function attempt() {
+      const geminiRes = await callGemini();
+      if (geminiRes.status === 429) {
+        return { ok: false, error: "quota_exceeded" };
+      }
+      if (geminiRes.status === 503) {
+        return { ok: false, error: "upstream_error", detail: "503 from model" };
+      }
+      if (!geminiRes.ok) {
+        const errText = await geminiRes.text().catch(() => "");
+        return { ok: false, error: "upstream_error", detail: errText.slice(0, 300) };
+      }
+      const data = await geminiRes.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) return { ok: false, error: "empty_completion" };
+      try {
+        return { ok: true, parsed: JSON.parse(text) };
+      } catch {
+        return { ok: false, error: "invalid_json", raw: text.slice(0, 500) };
+      }
+    }
+
+    // These are one-off slips (model overloaded, or wrote a stray sentence
+    // around the JSON) — a single retry after a short delay clears most of
+    // them without the viewer ever noticing.
+    let result = await attempt();
+    if (!result.ok && (result.error === "upstream_error" || result.error === "invalid_json" || result.error === "empty_completion")) {
       await new Promise((r) => setTimeout(r, 1200));
-      geminiRes = await callGemini();
+      result = await attempt();
     }
 
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text().catch(() => "");
-      return new Response(JSON.stringify({ error: "upstream_error", detail: errText.slice(0, 300) }), {
-        status: 502,
-        headers,
-      });
+    if (!result.ok) {
+      const status = result.error === "quota_exceeded" ? 429 : 502;
+      return new Response(JSON.stringify(result), { status, headers });
     }
 
-    const data = await geminiRes.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) {
-      return new Response(JSON.stringify({ error: "empty_completion" }), { status: 502, headers });
-    }
-
-    let parsed;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      return new Response(JSON.stringify({ error: "invalid_json", raw: text.slice(0, 500) }), { status: 502, headers });
-    }
-
-    return new Response(JSON.stringify(parsed), {
+    return new Response(JSON.stringify(result.parsed), {
       headers: { ...headers, "Content-Type": "application/json" },
     });
   },

@@ -444,9 +444,12 @@
         renderTicket(data, {isExample:false});
         setBusy(false, '');
       } catch (e) {
+        console.error('Fix or Call diagnosis failed:', e);
         let msg = 'Something went wrong — try again.';
         if (e && e.error === 'rate_limited') msg = 'Too many requests right now — wait a bit and try again.';
         else if (e && e.error === 'image_too_large') msg = 'That photo is too large — try a smaller one.';
+        else if (e && e.error === 'quota_exceeded') msg = 'This demo\'s free AI quota is used up for now — try again in a bit, or use the Claude version above.';
+        else if (e && e.error) msg = 'Something went wrong (' + e.error + ') — try again.';
         setBusy(false, msg);
         result.hidden = false;
       }
@@ -463,23 +466,46 @@
       "Reply with ONLY a JSON object, no markdown fence, matching exactly this shape:",
       '{"itemName": "short 2-4 word name of the broken thing", "verdict": "diy" | "borderline" | "pro", "diagnosis": "2-3 plain-English sentences on what is likely wrong and why", "estTimeMinutes": number, "estCostUSD": number or [minNumber,maxNumber], "tools": ["short common-name tool or material", ...], "steps": ["short imperative step", ...], "safetyNote": "one sentence warning, or null if none apply", "proScript": "one short sentence the person can say when calling a pro, or null if verdict is diy", "proCostRange": "typical price range as a string like \\"$120-250\\", or null if verdict is diy"}',
       "If verdict is \"pro\", steps should describe what the professional will do (not DIY instructions), tools should be empty or minimal, and proScript/proCostRange must be filled in.",
-      "If verdict is \"diy\" or \"borderline\", give 3-6 concrete steps and a real tools list, and leave proScript/proCostRange null unless useful as a fallback."
+      "If verdict is \"diy\" or \"borderline\", give 3-6 concrete steps and a real tools list, and leave proScript/proCostRange null unless useful as a fallback.",
+      "Even if the description is vague, ambiguous, or oddly worded, make your best reasonable guess and still return the JSON object — never reply with a clarifying question or plain text, and never refuse; note any uncertainty inside the diagnosis field itself."
     ].filter(Boolean).join('\n');
 
-    try {
-      const data = await sample.json(prompt, {
+    const RETRYABLE = ['invalid_json', 'empty_completion', 'refused'];
+    async function askClaude(){
+      return sample.json(prompt, {
         modelTier: 'default',
         cache: false,
         images: selectedFile || undefined
       });
+    }
+
+    try {
+      let data;
+      try {
+        data = await askClaude();
+      } catch (first) {
+        if (first && RETRYABLE.includes(first.code)) {
+          data = await askClaude(); // one retry: these codes are usually a one-off formatting slip
+        } else {
+          throw first;
+        }
+      }
       renderTicket(data, {isExample:false});
       setBusy(false, '');
     } catch (e) {
+      console.error('Fix or Call diagnosis failed:', e);
       let msg = 'Something went wrong — try again.';
       if (e && e.code === 'not_granted') msg = 'AI diagnosis needs to be allowed for this page.';
       else if (e && e.code === 'image_rejected') msg = 'That photo couldn\'t be used — try a different one or describe it instead.';
       else if (e && e.code === 'rate_limited') msg = 'Too many requests right now — wait a moment and try again.';
-      else if (e && e.code === 'invalid_json') msg = 'Got an unusable answer — try rephrasing the description.';
+      else if (e && e.code === 'invalid_json') msg = 'Got an unusable answer twice in a row — try rephrasing the description.';
+      else if (e && e.code === 'refused') msg = 'That request was declined — try rephrasing the description.';
+      else if (e && e.code === 'empty_completion') msg = 'Got an empty answer — try adding a bit more detail.';
+      else if (e && e.code === 'prompt_too_large') msg = 'That description is too long — try shortening it.';
+      else if (e && e.code === 'sampling_disabled' || e && e.code === 'not_declared') msg = 'AI diagnosis isn\'t available for this account right now.';
+      else if (e && e.code === 'session_expired') msg = 'Your session expired — reload the page and try again.';
+      else if (e && e.code === 'upstream_error') msg = 'Claude had a temporary issue — try again in a moment.';
+      else if (e && e.code) msg = 'Something went wrong (' + e.code + ') — try again.';
       setBusy(false, msg);
       result.hidden = false;
     }
