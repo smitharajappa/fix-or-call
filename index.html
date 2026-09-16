@@ -200,8 +200,8 @@
 
 <div class="page">
   <div class="static-banner" id="staticBanner" hidden>
-    This is a static preview on GitHub Pages — the AI diagnosis needs Claude's own runtime to work.
-    <a href="https://claude.ai/artifact/UquqvF1S2waA3UEyFUWaTL" target="_blank" rel="noopener">Try the live, working version on Claude →</a>
+    This build runs on Google Gemini (via a small proxy) since it's outside Claude's own runtime here.
+    <a href="https://claude.ai/artifact/UquqvF1S2waA3UEyFUWaTL" target="_blank" rel="noopener">The Claude-native version lives here →</a>
   </div>
   <header>
     <span class="eyebrow">Household repair triage</span>
@@ -251,9 +251,20 @@
   const photoName = document.getElementById('photoName');
   const photoClear = document.getElementById('photoClear');
 
+  const PROXY_URL = 'https://fix-or-call-proxy.proud-hat-8d6f.workers.dev';
   let selectedFile = null;
   let sample = null;
   let imagesOk = false;
+  let useProxy = false;
+
+  function fileToBase64(file){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
 
   document.getElementById('exampleChips').addEventListener('click', (e) => {
     const btn = e.target.closest('.chip');
@@ -393,8 +404,9 @@
       } catch (e) { /* keep defaults */ }
     });
   } else {
+    useProxy = true;
+    imagesOk = true;
     document.getElementById('staticBanner').hidden = false;
-    goBtn.textContent = 'Try it live on Claude →';
   }
 
   function setBusy(isBusy, label){
@@ -403,23 +415,43 @@
   }
 
   goBtn.addEventListener('click', async () => {
-    if (!window.claude || typeof window.claude.use !== 'function') {
-      window.open('https://claude.ai/artifact/UquqvF1S2waA3UEyFUWaTL', '_blank', 'noopener');
-      return;
-    }
-
     const desc = descInput.value.trim();
     if (!desc && !selectedFile) {
       statusText.textContent = 'Add a description or a photo first.';
       return;
     }
-    if (!sample) {
+    if (!useProxy && !sample) {
       statusText.textContent = 'AI diagnosis isn\'t available in this view.';
       return;
     }
 
     setBusy(true, 'Thinking…');
     result.hidden = true;
+
+    if (useProxy) {
+      try {
+        const payload = { description: desc };
+        if (selectedFile) {
+          payload.image = { data: await fileToBase64(selectedFile), mimeType: selectedFile.type || 'image/jpeg' };
+        }
+        const res = await fetch(PROXY_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) throw data;
+        renderTicket(data, {isExample:false});
+        setBusy(false, '');
+      } catch (e) {
+        let msg = 'Something went wrong — try again.';
+        if (e && e.error === 'rate_limited') msg = 'Too many requests right now — wait a bit and try again.';
+        else if (e && e.error === 'image_too_large') msg = 'That photo is too large — try a smaller one.';
+        setBusy(false, msg);
+        result.hidden = false;
+      }
+      return;
+    }
 
     const prompt = [
       "You are a calm, encouraging home-repair triage assistant for someone with little to no repair experience or tools.",
